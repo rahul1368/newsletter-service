@@ -3,6 +3,8 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bullmq';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateContentDto } from './dto/create-content.dto';
 import { UpdateContentDto } from './dto/update-content.dto';
@@ -10,7 +12,10 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class ContentService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @InjectQueue('email') private readonly emailQueue: Queue,
+  ) {}
 
   async create(createContentDto: CreateContentDto) {
     // Validate topic exists
@@ -42,6 +47,24 @@ export class ContentService {
           topic: true,
         },
       });
+
+      // Schedule email job for the scheduled time
+      await this.emailQueue.add(
+        'send-content',
+        {
+          contentId: content.id,
+          topicId: content.topicId,
+        },
+        {
+          delay: createContentDto.scheduledAt.getTime() - Date.now(),
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+            delay: 5000,
+          },
+        },
+      );
+
       return content;
     } catch (error) {
       if (
