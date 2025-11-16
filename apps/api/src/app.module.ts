@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { SubscribersModule } from './subscribers/subscribers.module';
 import { TopicsModule } from './topics/topics.module';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { TopicsModule } from './topics/topics.module';
     PrismaModule,
     SubscribersModule,
     TopicsModule,
+    SubscriptionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
