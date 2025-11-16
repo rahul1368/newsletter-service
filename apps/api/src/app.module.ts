@@ -8,6 +8,7 @@ import { SubscribersModule } from './subscribers/subscribers.module';
 import { TopicsModule } from './topics/topics.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { ContentModule } from './content/content.module';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { ContentModule } from './content/content.module';
     TopicsModule,
     SubscriptionsModule,
     ContentModule,
+    EmailModule,
   ],
   controllers: [AppController],
   providers: [AppService],
