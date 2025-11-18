@@ -19,6 +19,7 @@ import {
   type UpdateSubscriberDto,
   updateSubscriberSchema,
 } from './dto/update-subscriber.dto';
+import { createZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 
 @Controller('subscribers')
 export class SubscribersController {
@@ -26,10 +27,11 @@ export class SubscribersController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() createSubscriberDto: CreateSubscriberDto) {
-    // Validate with Zod schema
-    const validated = createSubscriberSchema.parse(createSubscriberDto);
-    return this.subscribersService.create(validated);
+  create(
+    @Body(createZodValidationPipe(createSubscriberSchema))
+    createSubscriberDto: CreateSubscriberDto,
+  ) {
+    return this.subscribersService.create(createSubscriberDto);
   }
 
   @Get()
@@ -45,11 +47,10 @@ export class SubscribersController {
   @Patch(':id')
   update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() updateSubscriberDto: UpdateSubscriberDto,
+    @Body(createZodValidationPipe(updateSubscriberSchema))
+    updateSubscriberDto: UpdateSubscriberDto,
   ) {
-    // Validate with Zod schema
-    const validated = updateSubscriberSchema.parse(updateSubscriberDto);
-    return this.subscribersService.update(id, validated);
+    return this.subscribersService.update(id, updateSubscriberDto);
   }
 
   @Delete(':id')

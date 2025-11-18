@@ -13,6 +13,7 @@ import {
 import { TopicsService } from './topics.service';
 import { type CreateTopicDto, createTopicSchema } from './dto/create-topic.dto';
 import { type UpdateTopicDto, updateTopicSchema } from './dto/update-topic.dto';
+import { createZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 
 @Controller('topics')
 export class TopicsController {
@@ -20,10 +21,11 @@ export class TopicsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() createTopicDto: CreateTopicDto) {
-    // Validate with Zod schema
-    const validated = createTopicSchema.parse(createTopicDto);
-    return this.topicsService.create(validated);
+  create(
+    @Body(createZodValidationPipe(createTopicSchema))
+    createTopicDto: CreateTopicDto,
+  ) {
+    return this.topicsService.create(createTopicDto);
   }
 
   @Get()
@@ -44,11 +46,10 @@ export class TopicsController {
   @Patch(':id')
   update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() updateTopicDto: UpdateTopicDto,
+    @Body(createZodValidationPipe(updateTopicSchema))
+    updateTopicDto: UpdateTopicDto,
   ) {
-    // Validate with Zod schema
-    const validated = updateTopicSchema.parse(updateTopicDto);
-    return this.topicsService.update(id, validated);
+    return this.topicsService.update(id, updateTopicDto);
   }
 
   @Delete(':id')
