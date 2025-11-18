@@ -53,8 +53,11 @@ WORKDIR /app
 # Copy package files
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-# Copy Prisma files
+# Copy Prisma files (including migrations)
 COPY prisma ./prisma
+
+# Verify migrations are copied
+RUN ls -la prisma/ && ls -la prisma/migrations/ || echo "Migrations directory not found!"
 
 # Install production dependencies (includes @prisma/client)
 # Also install prisma CLI as dev dependency for migrations and client generation
