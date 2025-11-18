@@ -25,16 +25,16 @@ services:
           name: newsletter-redis
           type: redis
           property: port
-      - key: REDIS_PASSWORD
+      # Redis connectionString (includes auth if needed)
+      - key: REDIS_URL
         fromService:
           name: newsletter-redis
           type: redis
-          property: password
+          property: connectionString
       # Email service
       - key: RESEND_API_KEY
         sync: false
       - key: SENDER_EMAIL
-        sync: false
         value: onboarding@resend.dev
       # Application
       - key: NODE_ENV
@@ -51,6 +51,7 @@ services:
     plan: starter
     region: oregon
     maxmemoryPolicy: allkeys-lru
+    ipAllowList: []  # Allow all IPs (empty array means allow all)
 
 databases:
   # PostgreSQL Database
