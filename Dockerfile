@@ -32,7 +32,8 @@ RUN PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 pnpm prisma:generate && \
 
 # Copy source code
 COPY apps ./apps
-COPY libs ./libs
+# Create libs directory (empty for now, but needed for monorepo structure)
+RUN mkdir -p ./libs
 
 # Build the application
 RUN pnpm build
