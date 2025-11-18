@@ -9,6 +9,8 @@ import { TopicsModule } from './topics/topics.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { ContentModule } from './content/content.module';
 import { EmailModule } from './email/email.module';
+import { HealthModule } from './health/health.module';
+import { StatsModule } from './stats/stats.module';
 
 @Module({
   imports: [
@@ -29,6 +31,8 @@ import { EmailModule } from './email/email.module';
     SubscriptionsModule,
     ContentModule,
     EmailModule,
+    HealthModule,
+    StatsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
