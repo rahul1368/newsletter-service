@@ -93,4 +93,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
 
 # Use entrypoint script to run migrations before starting
 ENTRYPOINT ["./docker-entrypoint.sh"]
+CMD []
 
