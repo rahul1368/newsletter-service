@@ -5,9 +5,14 @@ echo "🚀 Starting Newsletter Service..."
 
 # Run database migrations
 echo "📦 Running database migrations..."
-npx prisma migrate deploy || {
+cd /app
+pnpm exec prisma migrate deploy || {
   echo "❌ Migration failed!"
-  exit 1
+  echo "Attempting with npx..."
+  npx prisma migrate deploy || {
+    echo "❌ Migration failed with both pnpm and npx!"
+    exit 1
+  }
 }
 
 echo "✅ Migrations completed successfully"
