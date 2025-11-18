@@ -19,6 +19,7 @@ import {
   type UpdateContentDto,
   updateContentSchema,
 } from './dto/update-content.dto';
+import { createZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 
 @Controller('content')
 export class ContentController {
@@ -26,10 +27,11 @@ export class ContentController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() createContentDto: CreateContentDto) {
-    // Validate with Zod schema
-    const validated = createContentSchema.parse(createContentDto);
-    return this.contentService.create(validated);
+  create(
+    @Body(createZodValidationPipe(createContentSchema))
+    createContentDto: CreateContentDto,
+  ) {
+    return this.contentService.create(createContentDto);
   }
 
   @Get()
@@ -50,11 +52,10 @@ export class ContentController {
   @Patch(':id')
   update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() updateContentDto: UpdateContentDto,
+    @Body(createZodValidationPipe(updateContentSchema))
+    updateContentDto: UpdateContentDto,
   ) {
-    // Validate with Zod schema
-    const validated = updateContentSchema.parse(updateContentDto);
-    return this.contentService.update(id, validated);
+    return this.contentService.update(id, updateContentDto);
   }
 
   @Delete(':id')
