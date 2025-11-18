@@ -47,7 +47,7 @@ services:
     # Start command (handled by Dockerfile CMD)
 
   # PostgreSQL Database
-  - type: pgsql
+  - type: postgres
     name: newsletter-db
     plan: starter
     region: oregon
