@@ -66,15 +66,15 @@ RUN npm install -g prisma && \
     PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 PRISMA_ENGINES_MIRROR=https://binaries.prisma.sh prisma generate || \
     (sleep 5 && PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 prisma generate)
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nestjs -u 1001
-
 # Copy entrypoint script
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 
 # Make entrypoint executable
 RUN chmod +x ./docker-entrypoint.sh
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nestjs -u 1001
 
 # Change ownership
 RUN chown -R nestjs:nodejs /app
