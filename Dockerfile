@@ -23,11 +23,10 @@ COPY prisma ./prisma
 RUN pnpm install --frozen-lockfile
 
 # Generate Prisma Client (with retry for network issues)
-RUN PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 pnpm prisma:generate && \
-    ls -la node_modules/.prisma/client 2>/dev/null && \
-    echo "Prisma Client generated successfully" || \
-    (echo "Retrying Prisma generation..." && sleep 10 && PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 pnpm prisma:generate && \
-     ls -la node_modules/.prisma/client && echo "Prisma Client generated on retry") || \
+# Note: With pnpm, Prisma Client is generated to node_modules/.pnpm/@prisma+client@.../node_modules/@prisma/client
+# We rely on Prisma's exit code rather than checking a specific path
+RUN PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 pnpm prisma:generate || \
+    (echo "Retrying Prisma generation..." && sleep 10 && PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 pnpm prisma:generate) || \
     (echo "ERROR: Prisma Client generation failed!" && exit 1)
 
 # Copy source code
@@ -41,8 +40,12 @@ RUN pnpm build
 # Production stage
 FROM node:20-slim AS production
 
-# Install pnpm
-RUN npm install -g pnpm
+# Install OpenSSL (required for Prisma) and pnpm
+RUN apt-get update -y && \
+    apt-get install -y openssl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    npm install -g pnpm
 
 # Set working directory
 WORKDIR /app
@@ -53,19 +56,19 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 # Copy Prisma files
 COPY prisma ./prisma
 
-# Install production dependencies + Prisma CLI (needed for migrations)
+# Install production dependencies (includes @prisma/client)
+# Also install prisma CLI as dev dependency for migrations and client generation
 RUN pnpm install --frozen-lockfile --prod && \
-    npm install -g prisma
+    pnpm add -D -w prisma
 
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
-# Install Prisma CLI and generate Prisma Client for production
+# Generate Prisma Client for production (needed at runtime)
 # Use environment variable to handle network issues
-RUN npm install -g prisma && \
-    PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 PRISMA_ENGINES_MIRROR=https://binaries.prisma.sh prisma generate || \
-    (sleep 5 && PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 prisma generate)
+RUN PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 pnpm prisma:generate || \
+    (echo "Retrying Prisma generation..." && sleep 5 && PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 pnpm prisma:generate) || \
+    (echo "ERROR: Prisma Client generation failed!" && exit 1)
 
 # Copy entrypoint script
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
@@ -73,9 +76,9 @@ COPY docker-entrypoint.sh ./docker-entrypoint.sh
 # Make entrypoint executable
 RUN chmod +x ./docker-entrypoint.sh
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nestjs -u 1001
+# Create non-root user (Debian syntax)
+RUN groupadd -g 1001 nodejs && \
+    useradd -u 1001 -g nodejs -s /bin/sh nestjs
 
 # Change ownership
 RUN chown -R nestjs:nodejs /app
