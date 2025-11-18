@@ -30,6 +30,7 @@
     "@nestjs/config": "^3.2.3",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/swagger": "^11.2.3",
     "@prisma/client": "^5.20.0",
     "bullmq": "^5.25.0",
     "ioredis": "^5.4.1",

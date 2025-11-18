@@ -52,17 +52,35 @@ This will start:
 
 ### 4. Configure environment variables
 
-Copy `.env.example` to `.env` and update the values:
+Create a `.env` file in the root directory with the following variables:
 
 ```bash
-cp .env.example .env
+# Database
+DATABASE_URL="postgresql://user:password@localhost:5432/newsletter_db"
+DATABASE_USER="user"
+DATABASE_PASSWORD="password"
+DATABASE_NAME="newsletter_db"
+
+# Redis
+REDIS_HOST="localhost"
+REDIS_PORT="6379"
+REDIS_PASSWORD=""
+
+# Email Service (Resend)
+RESEND_API_KEY="re_YOUR_RESEND_API_KEY"
+SENDER_EMAIL="onboarding@resend.dev"
+
+# Application
+PORT=3000
+NODE_ENV=development
 ```
 
-Update the following variables:
-- `DATABASE_URL` - PostgreSQL connection string
+**Required variables:**
+- `DATABASE_URL` - PostgreSQL connection string (must match docker-compose.yml)
 - `REDIS_HOST` - Redis host (default: localhost)
 - `REDIS_PORT` - Redis port (default: 6379)
 - `RESEND_API_KEY` - Your Resend API key (get from https://resend.com)
+- `SENDER_EMAIL` - Email address for sending newsletters (default: onboarding@resend.dev)
 
 ### 5. Run database migrations
 
@@ -84,41 +102,86 @@ pnpm start:dev
 
 The API will be available at `http://localhost:3000`
 
+**Swagger API Documentation:** `http://localhost:3000/api`
+
 ## Available Scripts
 
+### Development
 - `pnpm start` - Start the API application
-- `pnpm start:dev` - Start in development mode with watch
+- `pnpm start:dev` - Start in development mode with watch (hot reload)
 - `pnpm start:debug` - Start in debug mode
 - `pnpm start:prod` - Start production build
-- `pnpm build` - Build the API application
+
+### Building
+- `pnpm build` - Build the API application for production
+
+### Testing
 - `pnpm test` - Run unit tests
 - `pnpm test:e2e` - Run E2E tests
-- `pnpm lint` - Lint code
+- `pnpm test:watch` - Run tests in watch mode
+- `pnpm test:cov` - Run tests with coverage
+
+### Code Quality
+- `pnpm lint` - Lint code and auto-fix issues
 - `pnpm format` - Format code with Prettier
+
+### Database
 - `pnpm prisma:generate` - Generate Prisma Client
-- `pnpm prisma:migrate` - Run database migrations
+- `pnpm prisma:migrate` - Run database migrations (development)
 - `pnpm prisma:studio` - Open Prisma Studio (database GUI)
+- `pnpm prisma:seed` - Seed the database (if seed file exists)
 
 ## Project Structure
 
 ```
 newsletter-service/
 ├── apps/
-│   └── api/              # Main API application
+│   └── api/                    # Main API application
 │       ├── src/
-│       │   ├── prisma/  # Prisma service module
-│       │   └── ...
-│       └── test/        # E2E tests
-├── libs/                 # Shared libraries (future)
+│       │   ├── common/         # Shared utilities (filters, pipes)
+│       │   ├── content/        # Content management module
+│       │   ├── email/           # Email service and processor
+│       │   ├── health/          # Health check module
+│       │   ├── prisma/          # Prisma service module
+│       │   ├── stats/           # Statistics module
+│       │   ├── subscribers/     # Subscriber management module
+│       │   ├── subscriptions/   # Subscription management module
+│       │   ├── topics/         # Topic management module
+│       │   ├── app.module.ts   # Root module
+│       │   └── main.ts         # Application entry point
+│       └── test/                # E2E tests
+├── libs/                        # Shared libraries (empty for now)
 ├── prisma/
-│   └── schema.prisma    # Database schema
-├── docker-compose.yml    # Docker services configuration
-└── package.json
+│   ├── migrations/             # Database migrations
+│   └── schema.prisma           # Database schema
+├── docker-compose.yml           # Docker services configuration
+├── Dockerfile                   # Production Docker image
+├── docker-entrypoint.sh         # Entrypoint script for migrations
+├── render.yaml                  # Render deployment configuration
+└── package.json                # Root package.json
 ```
 
-## API Endpoints
+## API Documentation
 
-Base URL: `http://localhost:3000`
+### Swagger UI
+
+Interactive API documentation is available via Swagger UI:
+
+- **Local Development:** `http://localhost:3000/api`
+- **Production:** `https://newsletter-api-wujw.onrender.com/api`
+
+The Swagger UI provides:
+- Complete API endpoint documentation
+- Interactive API testing
+- Request/response schemas
+- Example payloads
+- Try-it-out functionality
+
+### API Endpoints
+
+**Base URLs:**
+- **Local Development:** `http://localhost:3000`
+- **Production:** `https://newsletter-api-wujw.onrender.com`
 
 All endpoints return JSON. Error responses follow a consistent format:
 ```json
@@ -544,7 +607,7 @@ Deletes content. Cannot delete content that has already been sent.
 #### Health Check
 **GET** `/health`
 
-Checks the health status of the service and its dependencies.
+Checks the health status of the service and its dependencies (database and Redis).
 
 **Response:** `200 OK`
 ```json
@@ -562,10 +625,12 @@ Checks the health status of the service and its dependencies.
 }
 ```
 
+**Test:** `curl https://newsletter-api-wujw.onrender.com/health`
+
 #### Service Statistics
 **GET** `/stats`
 
-Returns comprehensive statistics about the service.
+Returns comprehensive statistics about the service including subscriber counts, topic counts, content status, and email delivery statistics.
 
 **Response:** `200 OK`
 ```json
@@ -607,9 +672,21 @@ Returns comprehensive statistics about the service.
 
 1. **Create Topics** - Define newsletter topics (e.g., "Tech News", "Product Updates")
 2. **Add Subscribers** - Add email addresses to the system
-3. **Subscribe Users** - Associate subscribers with topics
+3. **Subscribe Users** - Associate subscribers with topics they want to receive
 4. **Create Content** - Create content with a scheduled send time and associate it with a topic
-5. **Automatic Sending** - The system automatically sends content to all subscribers of that topic at the scheduled time
+5. **Automatic Scheduling** - When content is created, a job is automatically scheduled in BullMQ (Redis) for the specified time
+6. **Automatic Sending** - At the scheduled time, the EmailProcessor automatically:
+   - Fetches all active subscribers for the content's topic
+   - Sends personalized emails via Resend API
+   - Logs each email delivery attempt in EmailLog
+   - Updates content status to "sent" or "failed"
+
+**Key Features:**
+- ✅ Automatic email scheduling with BullMQ
+- ✅ Email delivery tracking and logging
+- ✅ Retry mechanism for failed emails
+- ✅ Topic-based subscription management
+- ✅ Content protection (cannot modify/delete sent content)
 
 ## Usage Guide
 
@@ -902,10 +979,10 @@ This application is configured for deployment on [Render](https://render.com). T
    - Click "Apply" to start deployment
    - Render will automatically:
      - Build the Docker image
-     - Run database migrations (via `releaseCommand` in `render.yaml`)
+     - Run database migrations (via `docker-entrypoint.sh` script)
      - Start the web service
    - Wait for deployment to complete (usually 5-10 minutes)
-   - Database migrations run automatically before each deployment
+   - Database migrations run automatically before each deployment via the Docker entrypoint script
 
 5. **Verify Deployment**
    - Check the service logs to ensure migrations completed successfully
@@ -958,9 +1035,10 @@ If you prefer to set up services manually:
    - Click "Create Web Service"
 
 4. **Database Migrations**
-   - Migrations run automatically via `releaseCommand` in `render.yaml`
+   - Migrations run automatically via `docker-entrypoint.sh` before the app starts
+   - The entrypoint script executes `pnpm exec prisma migrate deploy` automatically
    - No manual migration step needed
-   - If using manual setup, add release command: `npx prisma migrate deploy`
+   - If migrations fail, check Render logs for details
 
 ### Environment Variables
 
@@ -968,12 +1046,12 @@ If you prefer to set up services manually:
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host:5432/db` |
-| `REDIS_HOST` | Redis host address | `redis-xxx.render.com` |
-| `REDIS_PORT` | Redis port | `6379` |
-| `REDIS_PASSWORD` | Redis password | `password123` |
-| `RESEND_API_KEY` | Resend API key | `re_xxxxxxxxxxxx` |
-| `SENDER_EMAIL` | Email address for sending | `onboarding@resend.dev` |
+| `DATABASE_URL` | PostgreSQL connection string (auto-set from database service) | `postgresql://user:pass@host:5432/db` |
+| `REDIS_HOST` | Redis host address (auto-set from Redis service) | `redis-xxx.render.com` |
+| `REDIS_PORT` | Redis port (auto-set from Redis service) | `6379` |
+| `REDIS_URL` | Redis connection string (auto-set from Redis service) | `redis://:password@host:6379` |
+| `RESEND_API_KEY` | Resend API key (must be set manually) | `re_xxxxxxxxxxxx` |
+| `SENDER_EMAIL` | Email address for sending (default: onboarding@resend.dev) | `onboarding@resend.dev` |
 
 #### Optional Variables
 
@@ -1016,12 +1094,14 @@ If you prefer to set up services manually:
 
 ### Database Migrations
 
-Database migrations are **automatically run** on each deployment via the `releaseCommand` in `render.yaml`:
-```yaml
-releaseCommand: npx prisma migrate deploy
+Database migrations are **automatically run** on each deployment via the `docker-entrypoint.sh` script, which executes before the application starts:
+
+```bash
+# The entrypoint script runs:
+pnpm exec prisma migrate deploy
 ```
 
-This ensures your database schema is always up-to-date with your code.
+This ensures your database schema is always up-to-date with your code. The migrations run automatically on every container start.
 
 **Manual Migration (if needed):**
 If you need to run migrations manually, use Render Shell:
@@ -1107,21 +1187,80 @@ render shell:run --service newsletter-api "pnpm prisma migrate deploy"
 - **Metrics:** Basic metrics available in Render Dashboard
 - **Alerts:** Configure alerts in Render Dashboard for service failures
 
+### Production URL
+
+The service is deployed at: **https://newsletter-api-wujw.onrender.com**
+
+You can test the API using this URL:
+```bash
+curl https://newsletter-api-wujw.onrender.com/health
+```
+
 ### Cost Estimation
 
 Render pricing (as of 2024):
-- **Web Service (Starter):** $7/month
-- **PostgreSQL (Starter):** $7/month
-- **Redis (Starter):** $7/month
-- **Total:** ~$21/month
+- **Web Service (Free):** $0/month (with limitations)
+- **PostgreSQL (Free):** $0/month (with limitations)
+- **Redis (Free):** $0/month (with limitations)
+- **Total:** $0/month (Free tier)
 
-Note: Free tier available for testing, but with limitations.
+**Note:** The free tier has limitations:
+- Services may spin down after inactivity
+- Limited database storage
+- Limited Redis memory
+- For production use, consider upgrading to paid plans (Starter: $7/month per service)
 
 ### Additional Resources
 
 - [Render Documentation](https://render.com/docs)
 - [Render Docker Guide](https://render.com/docs/docker)
 - [Render Environment Variables](https://render.com/docs/environment-variables)
+
+## Testing Email Scheduling
+
+To test the automatic email scheduling feature:
+
+```bash
+# Use the provided test script
+./test-email-scheduling.sh https://newsletter-api-wujw.onrender.com 30
+
+# Or manually:
+# 1. Create a subscriber
+curl -X POST https://newsletter-api-wujw.onrender.com/subscribers \
+  -H "Content-Type: application/json" \
+  -d '{"email": "your-email@example.com"}'
+
+# 2. Create a topic (or use existing)
+curl -X POST https://newsletter-api-wujw.onrender.com/topics \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Test Topic", "description": "Test"}'
+
+# 3. Subscribe to topic
+curl -X POST https://newsletter-api-wujw.onrender.com/subscribers/1/subscribe/1
+
+# 4. Create content scheduled for 30 seconds from now
+curl -X POST https://newsletter-api-wujw.onrender.com/content \
+  -H "Content-Type: application/json" \
+  -d '{
+    "topicId": 1,
+    "title": "Test Newsletter",
+    "body": "This is a test email",
+    "scheduledAt": "2024-01-15T10:00:30.000Z"
+  }'
+
+# 5. Wait and check status
+curl https://newsletter-api-wujw.onrender.com/content/1
+```
+
+## Additional Resources
+
+- **Production API:** https://newsletter-api-wujw.onrender.com
+- **Swagger API Docs:** https://newsletter-api-wujw.onrender.com/api
+- **Health Check:** https://newsletter-api-wujw.onrender.com/health
+- **API Documentation:** See "API Endpoints" section above or use Swagger UI
+- **Improvements & Pitfalls:** See `IMPROVEMENTS_AND_PITFALLS.md`
+- **Testing Guide:** See `TESTING_GUIDE.md`
+- **Deployment Guide:** See `RENDER_DEPLOYMENT_GUIDE.md`
 
 ## License
 

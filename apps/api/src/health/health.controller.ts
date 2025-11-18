@@ -1,4 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { PrismaService } from '../prisma/prisma.service';
 import { Redis } from 'ioredis';
 import { ConfigService } from '@nestjs/config';
@@ -18,6 +19,7 @@ interface HealthCheckResponse {
   };
 }
 
+@ApiTags('health')
 @Controller('health')
 export class HealthController {
   private redis: Redis;
@@ -41,6 +43,52 @@ export class HealthController {
   }
 
   @Get()
+  @ApiOperation({
+    summary: 'Health check',
+    description: 'Checks the health status of the service and its dependencies (database and Redis)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Service health status',
+    schema: {
+      type: 'object',
+      properties: {
+        status: {
+          type: 'string',
+          enum: ['healthy', 'unhealthy'],
+        },
+        timestamp: {
+          type: 'string',
+          format: 'date-time',
+        },
+        checks: {
+          type: 'object',
+          properties: {
+            database: {
+              type: 'object',
+              properties: {
+                status: {
+                  type: 'string',
+                  enum: ['healthy', 'unhealthy'],
+                },
+                message: { type: 'string', nullable: true },
+              },
+            },
+            redis: {
+              type: 'object',
+              properties: {
+                status: {
+                  type: 'string',
+                  enum: ['healthy', 'unhealthy'],
+                },
+                message: { type: 'string', nullable: true },
+              },
+            },
+          },
+        },
+      },
+    },
+  })
   async checkHealth(): Promise<HealthCheckResponse> {
     const checks = {
       database: await this.checkDatabase(),
