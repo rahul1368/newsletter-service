@@ -9,7 +9,7 @@ services:
     region: oregon
     healthCheckPath: /health
     envVars:
-      # Database connection (from PostgreSQL service)
+      # Database connection (from PostgreSQL database)
       - key: DATABASE_URL
         fromDatabase:
           name: newsletter-db
@@ -46,18 +46,17 @@ services:
     # Build command (handled by Dockerfile)
     # Start command (handled by Dockerfile CMD)
 
-  # PostgreSQL Database
-  - type: postgres
-    name: newsletter-db
-    plan: starter
-    region: oregon
-    databaseName: newsletter_db
-    user: newsletter_user
-
-  # Redis Cache
+  # Redis Cache Service
   - type: redis
     name: newsletter-redis
     plan: starter
     region: oregon
     maxmemoryPolicy: allkeys-lru
 
+databases:
+  # PostgreSQL Database
+  - name: newsletter-db
+    plan: starter
+    region: oregon
+    databaseName: newsletter_db
+    user: newsletter_user
