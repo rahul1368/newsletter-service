@@ -5,7 +5,7 @@ services:
     env: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    plan: starter
+    plan: free
     region: oregon
     healthCheckPath: /health
     envVars:
@@ -48,7 +48,7 @@ services:
   # Redis Cache Service
   - type: redis
     name: newsletter-redis
-    plan: starter
+    plan: free
     region: oregon
     maxmemoryPolicy: allkeys-lru
     ipAllowList: []  # Allow all IPs (empty array means allow all)
@@ -56,7 +56,7 @@ services:
 databases:
   # PostgreSQL Database
   - name: newsletter-db
-    plan: starter
+    plan: free
     region: oregon
     databaseName: newsletter_db
     user: newsletter_user
