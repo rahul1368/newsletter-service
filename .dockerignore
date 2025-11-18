@@ -45,9 +45,6 @@ tests
 docker-compose.yml
 .dockerignore
 
-# Prisma migrations (will be run separately)
-prisma/migrations
-
 # Logs
 logs
 *.log
