@@ -41,10 +41,9 @@ services:
         value: production
       - key: PORT
         value: 3000
-    # Release command: Run database migrations before starting
-    releaseCommand: prisma migrate deploy
     # Build command (handled by Dockerfile)
     # Start command (handled by Dockerfile CMD)
+    # Migrations run automatically via docker-entrypoint.sh before app starts
 
   # Redis Cache Service
   - type: redis

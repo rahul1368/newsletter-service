@@ -70,6 +70,12 @@ RUN npm install -g prisma && \
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nestjs -u 1001
 
+# Copy entrypoint script
+COPY docker-entrypoint.sh ./docker-entrypoint.sh
+
+# Make entrypoint executable
+RUN chmod +x ./docker-entrypoint.sh
+
 # Change ownership
 RUN chown -R nestjs:nodejs /app
 USER nestjs
@@ -81,6 +87,6 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Start the application
-CMD ["node", "dist/apps/api/main.js"]
+# Use entrypoint script to run migrations before starting
+ENTRYPOINT ["./docker-entrypoint.sh"]
 
